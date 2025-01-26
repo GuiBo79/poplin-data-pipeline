@@ -139,7 +139,8 @@ Navigate to http://localhost:8080.
 
 Navigate to http://localhost:8088.
 
-#### Explore Dashboards
+#### Explore Dashboards (Dashboards have to be created manually or imported after first Airflow Run)
+[Dashboard Sample](superset/dashboards/dashboard_export_20250126T210328.zip)
 
 View interactive dashboards.
 
@@ -216,6 +217,14 @@ psql -h localhost -p 54326 -U postgres -d warehouse
 dbt debug
 dbt run --select <failing_model>
 ```
+
+## Points of Improvement
+
+- Connect to a Datalake
+- Add Spark/Hadoop for heavy workloads
+- K8s Deployment Support for fast scaling
+- Deploy Airflow using K8s executors
+- Add prod web server and robust db to Apache Superset
 
 ## Contributors
 
