@@ -1,0 +1,17 @@
+name: 'poplin_project'
+version: '1.0'
+config-version: 2
+
+profile: 'poplin_project'
+
+model-paths: ['models']
+macro-paths: ['macros']
+
+models:
+  poplin_project:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: table
+    marts:
+      +materialized: table

@@ -169,3 +169,17 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+#dags
+dags/__pycache__/
+
+#dbt
+dbt/dbt_packages/
+dbt/target/
+dbt/.user.yml
+dbt/logs/
+
+#superset
+.DS_Store
+superset/.DS_Store
+superset/dashboards/.DS_Store

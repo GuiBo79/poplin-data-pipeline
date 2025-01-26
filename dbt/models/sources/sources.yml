@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: cdc
+    description: "Source schema for the analytics warehouse"
+    schema: cdc
+    database: warehouse
+    tables:
+      - name: orders
+        description: "Orders table in the analytics schema"
+      - name: managers
+        description: "Managers table in the analytics schema"
+      - name: returns
+        description: "Returns table in the analytics schema"

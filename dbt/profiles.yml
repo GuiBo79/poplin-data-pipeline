@@ -1,0 +1,12 @@
+poplin_project:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: warehouse-postgres
+      user: postgres
+      password: secretpassword
+      port: 5432
+      dbname: warehouse
+      schema: analytics
+      threads: 4

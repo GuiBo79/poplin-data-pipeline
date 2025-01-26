@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  poplin-postgres:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: poplin-postgres
+    ports:
+      - "54325:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: poplin-store
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./seed_data.sql:/docker-entrypoint-initdb.d/seed_data.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  warehouse-postgres:
+    image: postgres:latest
+    container_name: warehouse-postgres
+    ports:
+      - "54326:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: warehouse
+    volumes:
+      - warehouse_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Airflow
+  airflow:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    container_name: airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:secretpassword@warehouse-postgres:5432/warehouse
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__LOAD_DEFAULT_CONNECTIONS: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      poplin-postgres:
+        condition: service_healthy
+      warehouse-postgres:
+        condition: service_healthy
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./dbt:/opt/airflow/dbt
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: >
+      bash -c "
+      if [ ! -f /initialized ]; then
+        airflow db init &&
+        airflow users create --username admin --firstname Airflow --lastname Admin --role Admin --email admin@example.com --password admin &&
+        airflow connections add 'source_db' --conn-type 'postgres' --conn-host 'poplin-postgres' --conn-schema 'poplin-store' --conn-login 'postgres' --conn-password 'secretpassword' --conn-port '5432' &&
+        airflow connections add 'warehouse_db' --conn-type 'postgres' --conn-host 'warehouse-postgres' --conn-schema 'warehouse' --conn-login 'postgres' --conn-password 'secretpassword' --conn-port '5432' &&
+        touch /initialized;
+      fi;
+      airflow scheduler & airflow webserver
+      "
+
+  superset:
+    build:
+      context: ./superset
+      dockerfile: Dockerfile
+    container_name: superset
+    ports:
+      - "8088:8088"
+    environment:
+      SUPERSET_ENV: development
+      SUPERSET_LOAD_EXAMPLES: "false"
+      SUPERSET_SECRET_KEY: 'poplin_secret_key'
+    volumes:
+      - superset_data:/app/superset_home
+      - ./superset/dashboards:/app/superset_home/dashboards
+    depends_on:
+      warehouse-postgres:
+        condition: service_healthy
+    command: >
+      bash -c "
+      superset db upgrade &&
+      superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password admin &&
+      superset init &&
+      superset set-database-uri -d warehouse -u 'postgresql+psycopg2://postgres:secretpassword@warehouse-postgres:5432/warehouse' &&
+      superset run -h 0.0.0.0 -p 8088
+      "
+
+volumes:
+  postgres_data:
+  warehouse_data:
+  superset_data:
